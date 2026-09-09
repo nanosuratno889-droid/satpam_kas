@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Buku Kas Wajib &mdash; Live</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,500;0,700;1,500&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap');
+  :root{
+    --paper:#f3efe3; --paper-line:#d9d1ba; --ink:#26291f; --ink-soft:#5c5a4c;
+    --green:#2f5233; --green-light:#e4ead9; --gold:#a9822c; --red:#a13a2e; --white:#fffdf8;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);background-image:linear-gradient(var(--paper-line) 1px, transparent 1px);background-size:100% 2.1em;color:var(--ink);font-family:'Inter',sans-serif;padding:28px 16px 60px;}
+  .wrap{max-width:980px;margin:0 auto;}
+  header{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;border-bottom:3px double var(--ink);padding-bottom:14px;margin-bottom:22px;flex-wrap:wrap;}
+  header h1{font-family:'Source Serif 4',serif;font-weight:700;font-style:italic;font-size:2rem;margin:0 0 4px;color:var(--green);}
+  header p{margin:0;color:var(--ink-soft);font-size:0.92rem;}
+  .live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);margin-right:6px;animation:pulse 1.6s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
+  .status{font-family:'IBM Plex Mono',monospace;font-size:0.8rem;color:var(--ink-soft);}
+  .panel{background:var(--white);border:1px solid var(--paper-line);padding:18px 20px;margin-bottom:20px;}
+  .panel h2{font-family:'Source Serif 4',serif;font-size:1.1rem;margin:0 0 10px;color:var(--green);}
+  .log-item{padding:6px 0;border-bottom:1px dashed var(--paper-line);font-size:0.82rem;color:var(--ink-soft);}
+  .log-item b{color:var(--green);}
+  .table-scroll{overflow-x:auto;border:1px solid var(--paper-line);background:var(--white);}
+  table{border-collapse:collapse;width:100%;min-width:720px;font-size:0.88rem;}
+  thead th{background:var(--green);color:var(--white);font-weight:600;padding:10px 8px;text-align:center;white-space:nowrap;}
+  tbody td{padding:8px;border-bottom:1px solid var(--paper-line);}
+  tbody tr:nth-child(even){background:#faf7ee;}
+  td.no{text-align:center;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;width:38px;}
+  td.nama{font-weight:500;white-space:nowrap;}
+  td.jumlah{text-align:right;font-family:'IBM Plex Mono',monospace;cursor:pointer;white-space:nowrap;}
+  td.jumlah.paid{color:var(--green);font-weight:600;}
+  td.jumlah.unpaid{color:var(--ink-soft);}
+  td.jumlah.unpaid:hover{background:var(--green-light);}
+  tfoot td{background:var(--green-light);font-family:'IBM Plex Mono',monospace;font-weight:600;text-align:right;padding:10px 8px;border-top:2px solid var(--green);}
+  tfoot td.label{text-align:left;font-family:'Source Serif 4',serif;font-style:italic;font-weight:700;color:var(--green);}
+  .modal-bg{position:fixed;inset:0;background:rgba(38,41,31,0.5);display:none;align-items:center;justify-content:center;z-index:10;}
+  .modal-bg.show{display:flex;}
+  .modal{background:var(--white);padding:20px 24px;width:280px;border:1px solid var(--ink);}
+  .modal h3{margin:0 0 4px;font-family:'Source Serif 4',serif;font-size:1.05rem;}
+  .modal p{margin:0 0 12px;color:var(--ink-soft);font-size:0.82rem;}
+  .modal input{width:100%;padding:8px 10px;font-family:'IBM Plex Mono',monospace;border:1px solid var(--paper-line);margin-bottom:10px;font-size:0.9rem;}
+  .modal-actions{display:flex;justify-content:flex-end;gap:8px;}
+  .modal-actions button{padding:7px 14px;font-size:0.82rem;border:none;cursor:pointer;font-weight:600;}
+  .btn-save{background:var(--green);color:var(--white);}
+  .btn-clear{background:#f6e2de;color:var(--red);}
+  .btn-cancel{background:none;color:var(--ink-soft);}
+  .tagih-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
+  .tagih-row select, .tagih-row input{font-family:'IBM Plex Mono',monospace;padding:9px 10px;border:1px solid var(--paper-line);font-size:0.85rem;}
+  .tagih-row select{min-width:140px;}
+  .tagih-row input{flex:1;min-width:160px;}
+  .tagih-row button{background:var(--green);color:var(--white);border:none;padding:9px 16px;font-weight:600;font-size:0.85rem;cursor:pointer;}
+  .tagih-row button:hover{background:#243f27;}
+  .tagih-row button:disabled{background:#9aa398;cursor:not-allowed;}
+  textarea#tagihTemplate{width:100%;font-family:'IBM Plex Mono',monospace;font-size:0.82rem;padding:10px;border:1px solid var(--paper-line);background:var(--paper);resize:vertical;}
+  #tagihResult{margin-top:10px;font-size:0.82rem;}
+  .tagih-summary{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:6px;}
+  .tagih-summary span{padding:4px 10px;background:var(--green-light);color:var(--green);font-weight:600;}
+  .tagih-summary span.warn{background:#faf3e2;color:var(--gold);}
+  .tagih-summary span.err{background:#f6e2de;color:var(--red);}
+  .tagih-names{color:var(--ink-soft);}
+  .saldo-row{display:flex;gap:14px;flex-wrap:wrap;}
+  .saldo-box{flex:1;min-width:150px;background:var(--paper);border:1px solid var(--paper-line);padding:10px 14px;}
+  .saldo-label{display:block;font-size:0.75rem;color:var(--ink-soft);margin-bottom:4px;}
+  .saldo-val{font-family:'IBM Plex Mono',monospace;font-size:1.15rem;font-weight:600;color:var(--green);}
+  .saldo-val.in{color:var(--green);}
+  .saldo-val.out{color:var(--red);}
+  .secondary-btn{background:none;border:1px solid var(--green);color:var(--green);padding:8px 14px;font-size:0.82rem;font-weight:600;cursor:pointer;}
+  .secondary-btn:hover{background:var(--green);color:var(--white);}
+  .bulan-status{margin-top:10px;font-size:0.82rem;display:flex;gap:8px;flex-wrap:wrap;}
+  .bulan-status .badge{padding:3px 9px;background:var(--green-light);color:var(--green);font-weight:600;}
+  td.aksi{text-align:center;}
+  td.aksi button{background:none;border:none;color:var(--red);cursor:pointer;font-size:0.8rem;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Buku Kas Wajib</h1>
+      <p><span class="live-dot"></span>Terhubung ke WhatsApp &mdash; data diperbarui otomatis</p>
+    </div>
+    <div class="status" id="statusTag">memuat...</div>
+  </header>
+
+  <div class="panel" id="saldoPanel">
+    <h2>Ringkasan Saldo</h2>
+    <div class="saldo-row">
+      <div class="saldo-box"><span class="saldo-label">Total pemasukan</span><span class="saldo-val in" id="saldoMasuk">Rp -</span></div>
+      <div class="saldo-box"><span class="saldo-label">Total pengeluaran</span><span class="saldo-val out" id="saldoKeluar">Rp -</span></div>
+      <div class="saldo-box"><span class="saldo-label">Saldo kas saat ini</span><span class="saldo-val" id="saldoAkhir">Rp -</span></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Pesan masuk terbaru</h2>
+    <div id="logList"><div class="log-item">Belum ada pesan masuk.</div></div>
+  </div>
+
+  <div class="panel">
+    <h2>Kirim penagihan</h2>
+    <p style="margin:0 0 12px;color:var(--ink-soft);font-size:0.85rem;">
+      Mengirim pesan WhatsApp ke setiap anggota yang belum bayar pada bulan yang dipilih. Anggota yang sudah bayar otomatis dilewati.
+    </p>
+    <div class="tagih-row">
+      <select id="tagihMonth"></select>
+      <input type="password" id="tagihToken" placeholder="Token admin">
+      <button id="tagihBtn">Kirim ke yang belum bayar</button>
+    </div>
+    <textarea id="tagihTemplate" rows="3" placeholder="Template pesan (opsional, kosongkan untuk pakai bawaan)"></textarea>
+    <div style="font-size:0.78rem;color:var(--ink-soft);margin-top:4px;">
+      Placeholder yang bisa dipakai: <code>{nama}</code> <code>{bulan}</code> <code>{nominal}</code>
+    </div>
+    <div id="tagihResult"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Rekap kas (PDF)</h2>
+    <p style="margin:0 0 12px;color:var(--ink-soft);font-size:0.85rem;">
+      Setiap bulan yang lunas 100% (semua anggota sudah bayar) otomatis dibuatkan PDF dan dikirim ke seluruh anggota lewat WhatsApp.
+      Bisa juga diunduh atau dikirim ulang manual kapan saja di sini.
+    </p>
+    <div class="tagih-row">
+      <button id="unduhRekapBtn">Unduh PDF rekap lengkap</button>
+      <select id="rekapMonth"></select>
+      <input type="password" id="rekapToken" placeholder="Token admin">
+      <button id="kirimRekapBtn">Kirim ulang ke semua anggota</button>
+    </div>
+    <div id="rekapStatus" class="bulan-status"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Pengeluaran kas</h2>
+    <p style="margin:0 0 12px;color:var(--ink-soft);font-size:0.85rem;">
+      Terbuka untuk dilihat semua anggota. Menambah data pengeluaran perlu token admin.
+    </p>
+    <div class="tagih-row">
+      <input type="date" id="expTanggal">
+      <input type="text" id="expKeterangan" placeholder="Keterangan, mis. Beli spanduk 17 Agustus" style="flex:2;">
+      <input type="number" id="expNominal" placeholder="Nominal">
+      <input type="password" id="expToken" placeholder="Token admin">
+      <button id="expTambahBtn">+ Tambah</button>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th style="width:38px;">No</th><th>Tanggal</th><th style="text-align:left;">Keterangan</th><th>Nominal</th><th></th></tr></thead>
+        <tbody id="expTbody"></tbody>
+      </table>
+    </div>
+    <div style="margin-top:12px;">
+      <button id="unduhPengeluaranBtn" class="secondary-btn">Unduh PDF daftar pengeluaran</button>
+    </div>
+  </div>
+
+  <div class="panel" style="padding:0;overflow:hidden;">
+    <div style="padding:18px 20px 0;">
+      <h2>Kas Wajib Masuk</h2>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr id="headRow"><th style="width:38px;">No</th><th style="text-align:left;">Nama</th></tr></thead>
+        <tbody id="tbody"></tbody>
+        <tfoot><tr id="footRow"><td class="label" colspan="2">Total per bulan</td></tr></tfoot>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <h3 id="modalName"></h3>
+    <p id="modalMonth"></p>
+    <input type="number" id="modalAmount" placeholder="Nominal">
+    <input type="password" id="adminToken" placeholder="Token admin">
+    <div class="modal-actions">
+      <button class="btn-clear" id="modalClear">Kosongkan</button>
+      <button class="btn-cancel" id="modalCancel">Batal</button>
+      <button class="btn-save" id="modalSave">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function fmt(n){ return n ? 'Rp ' + Number(n).toLocaleString('id-ID') : '&mdash;'; }
+let current = null;
+let pending = null;
+
+async function fetchData(){
+  try{
+    const res = await fetch('/api/data');
+    current = await res.json();
+    document.getElementById('statusTag').textContent = 'diperbarui ' + new Date().toLocaleTimeString('id-ID');
+    render();
+  }catch(e){
+    document.getElementById('statusTag').textContent = 'gagal memuat data';
+  }
+  fetchExpenses();
+}
+
+async function fetchExpenses(){
+  try{
+    const res = await fetch('/api/pengeluaran');
+    const data = await res.json();
+    document.getElementById('saldoMasuk').textContent = fmt(data.totalMasuk);
+    document.getElementById('saldoKeluar').textContent = fmt(data.totalKeluar);
+    const saldoEl = document.getElementById('saldoAkhir');
+    saldoEl.textContent = fmt(data.saldo);
+    saldoEl.className = 'saldo-val ' + (data.saldo < 0 ? 'out' : 'in');
+
+    const tbody = document.getElementById('expTbody');
+    tbody.innerHTML = data.expenses.length ? data.expenses.map((e,i)=>`
+      <tr>
+        <td class="no">${i+1}</td>
+        <td>${e.tanggal}</td>
+        <td>${e.keterangan}</td>
+        <td class="jumlah">${fmt(e.nominal)}</td>
+        <td class="aksi"><button data-id="${e.id}">hapus</button></td>
+      </tr>
+    `).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--ink-soft);">Belum ada pengeluaran tercatat.</td></tr>';
+
+    tbody.querySelectorAll('button[data-id]').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const token = document.getElementById('expToken').value;
+        await fetch('/api/pengeluaran/' + btn.dataset.id, { method:'DELETE', headers:{'x-admin-token': token} });
+        fetchExpenses();
+      });
+    });
+  }catch(e){ /* biarkan diam, tidak kritis untuk tampilan utama */ }
+}
+
+function render(){
+  const { months, members, payments, log } = current;
+
+  const monthSelect = document.getElementById('tagihMonth');
+  const prevSelected = monthSelect.value;
+  monthSelect.innerHTML = months.map(m=>`<option value="${m}">${m}</option>`).join('');
+  if (months.includes(prevSelected)) monthSelect.value = prevSelected;
+  if (!current.reminderConfigured) {
+    document.getElementById('tagihBtn').disabled = true;
+    document.getElementById('tagihBtn').textContent = 'FONNTE_TOKEN belum diisi di server';
+  }
+
+  const headRow = document.getElementById('headRow');
+  headRow.innerHTML = '<th style="width:38px;">No</th><th style="text-align:left;">Nama</th>' + months.map(m=>`<th>${m}</th>`).join('');
+
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = members.map((member,i)=>{
+    const cells = months.map(month=>{
+      const amt = payments[member+'||'+month];
+      const cls = amt ? 'paid' : 'unpaid';
+      return `<td class="jumlah ${cls}" data-member="${member}" data-month="${month}">${fmt(amt)}</td>`;
+    }).join('');
+    return `<tr><td class="no">${i+1}</td><td class="nama">${member}</td>${cells}</tr>`;
+  }).join('');
+
+  const footRow = document.getElementById('footRow');
+  footRow.innerHTML = '<td class="label" colspan="2">Total per bulan</td>' + months.map(month=>{
+    let total = 0;
+    members.forEach(member=>{ total += payments[member+'||'+month] || 0; });
+    return `<td>${total ? fmt(total) : 'Rp -'}</td>`;
+  }).join('');
+
+  const logList = document.getElementById('logList');
+  logList.innerHTML = log.length ? log.map(l=>{
+    const time = new Date(l.at).toLocaleString('id-ID');
+    return `<div class="log-item"><b>${l.member}</b> &mdash; ${l.month}: ${fmt(l.amount)} <span style="opacity:0.7;">(${time})</span></div>`;
+  }).join('') : '<div class="log-item">Belum ada pesan masuk.</div>';
+
+  // panel rekap PDF
+  const rekapMonthSelect = document.getElementById('rekapMonth');
+  const prevRekapMonth = rekapMonthSelect.value;
+  rekapMonthSelect.innerHTML = months.map(m=>`<option value="${m}">${m}</option>`).join('');
+  if (months.includes(prevRekapMonth)) rekapMonthSelect.value = prevRekapMonth;
+
+  const sentMonths = current.recapSentMonths || [];
+  document.getElementById('rekapStatus').innerHTML = months.map(m=>
+    sentMonths.includes(m)
+      ? `<span class="badge">✓ ${m} terkirim</span>`
+      : `<span class="badge" style="background:var(--paper);color:var(--ink-soft);">${m} belum lunas semua</span>`
+  ).join('');
+
+  tbody.querySelectorAll('td.jumlah').forEach(td=>{
+    td.addEventListener('click', ()=>openModal(td.dataset.member, td.dataset.month));
+  });
+}
+
+function openModal(member, month){
+  pending = {member, month};
+  document.getElementById('modalName').textContent = member;
+  document.getElementById('modalMonth').textContent = 'Bulan: ' + month;
+  document.getElementById('modalAmount').value = current.payments[member+'||'+month] || '';
+  document.getElementById('modalBg').classList.add('show');
+}
+function closeModal(){ document.getElementById('modalBg').classList.remove('show'); pending = null; }
+
+async function saveManual(amount){
+  const token = document.getElementById('adminToken').value;
+  await fetch('/api/manual', {
+    method:'POST',
+    headers:{'Content-Type':'application/json', 'x-admin-token': token},
+    body: JSON.stringify({ member: pending.member, month: pending.month, amount })
+  });
+  await fetchData();
+  closeModal();
+}
+
+document.getElementById('modalSave').addEventListener('click', ()=>{
+  const val = document.getElementById('modalAmount').value;
+  saveManual(val === '' ? null : parseInt(val,10));
+});
+document.getElementById('modalClear').addEventListener('click', ()=> saveManual(null));
+document.getElementById('modalCancel').addEventListener('click', closeModal);
+document.getElementById('modalBg').addEventListener('click', e=>{ if(e.target.id==='modalBg') closeModal(); });
+
+document.getElementById('tagihBtn').addEventListener('click', async ()=>{
+  const btn = document.getElementById('tagihBtn');
+  const month = document.getElementById('tagihMonth').value;
+  const template = document.getElementById('tagihTemplate').value;
+  const token = document.getElementById('tagihToken').value;
+  const resultBox = document.getElementById('tagihResult');
+
+  btn.disabled = true;
+  const originalText = btn.textContent;
+  btn.textContent = 'Mengirim...';
+  resultBox.innerHTML = '';
+
+  try{
+    const res = await fetch('/api/tagih', {
+      method:'POST',
+      headers:{'Content-Type':'application/json', 'x-admin-token': token},
+      body: JSON.stringify({ month, template })
+    });
+    const data = await res.json();
+
+    if (data.error) {
+      resultBox.innerHTML = `<div class="tagih-summary"><span class="err">${data.error}</span></div>`;
+    } else {
+      resultBox.innerHTML = `
+        <div class="tagih-summary">
+          <span>✓ terkirim: ${data.sent.length}</span>
+          <span>sudah bayar (dilewati): ${data.skipped_paid.length}</span>
+          <span class="warn">tanpa nomor: ${data.skipped_no_phone.length}</span>
+          <span class="warn">baru saja ditagih: ${data.skipped_cooldown.length}</span>
+          ${data.failed.length ? `<span class="err">gagal: ${data.failed.length}</span>` : ''}
+        </div>
+        ${data.sent.length ? `<div class="tagih-names">Terkirim ke: ${data.sent.join(', ')}</div>` : ''}
+        ${data.skipped_no_phone.length ? `<div class="tagih-names">Belum ada nomor: ${data.skipped_no_phone.join(', ')}</div>` : ''}
+      `;
+    }
+    await fetchData();
+  }catch(e){
+    resultBox.innerHTML = `<div class="tagih-summary"><span class="err">Gagal menghubungi server</span></div>`;
+  }finally{
+    btn.disabled = !current.reminderConfigured;
+    btn.textContent = originalText;
+  }
+});
+
+document.getElementById('unduhRekapBtn').addEventListener('click', ()=>{
+  window.open('/api/rekap/download', '_blank');
+});
+
+document.getElementById('kirimRekapBtn').addEventListener('click', async ()=>{
+  const btn = document.getElementById('kirimRekapBtn');
+  const month = document.getElementById('rekapMonth').value;
+  const token = document.getElementById('rekapToken').value;
+  const statusBox = document.getElementById('rekapStatus');
+  btn.disabled = true;
+  const original = btn.textContent;
+  btn.textContent = 'Mengirim...';
+  try{
+    const res = await fetch('/api/rekap/kirim', {
+      method:'POST',
+      headers:{'Content-Type':'application/json', 'x-admin-token': token},
+      body: JSON.stringify({ month })
+    });
+    const data = await res.json();
+    if (data.error) {
+      alert(data.error);
+    } else {
+      alert(`Rekap ${month} terkirim ke ${data.sent.length} anggota.`);
+      fetchData();
+    }
+  }catch(e){
+    alert('Gagal menghubungi server.');
+  }finally{
+    btn.disabled = false;
+    btn.textContent = original;
+  }
+});
+
+document.getElementById('expTambahBtn').addEventListener('click', async ()=>{
+  const tanggal = document.getElementById('expTanggal').value;
+  const keterangan = document.getElementById('expKeterangan').value.trim();
+  const nominal = document.getElementById('expNominal').value;
+  const token = document.getElementById('expToken').value;
+  if (!tanggal || !keterangan || !nominal) { alert('Tanggal, keterangan, dan nominal wajib diisi.'); return; }
+
+  const res = await fetch('/api/pengeluaran', {
+    method:'POST',
+    headers:{'Content-Type':'application/json', 'x-admin-token': token},
+    body: JSON.stringify({ tanggal, keterangan, nominal })
+  });
+  const data = await res.json();
+  if (data.error) { alert(data.error); return; }
+  document.getElementById('expKeterangan').value = '';
+  document.getElementById('expNominal').value = '';
+  fetchExpenses();
+});
+
+document.getElementById('unduhPengeluaranBtn').addEventListener('click', ()=>{
+  window.open('/api/pengeluaran/pdf', '_blank');
+});
+
+fetchData();
+setInterval(fetchData, 5000); // cek pesan baru tiap 5 detik
+</script>
+</body>
+</html>
