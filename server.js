@@ -98,7 +98,7 @@ async function generateAndSendRecap({ month, months, members, data, req }) {
     months,
     members: members.map(m => m.name),
     payments: data.payments,
-    title: `Rekap Kas Wajib — ${month} Lunas Semua`,
+    title: `Rekap Kas Wajib Anggota Satpam bjb Sumber — ${month} Lunas Semua`,
   });
 
   if (!fs.existsSync(RECAP_DIR)) fs.mkdirSync(RECAP_DIR, { recursive: true });
@@ -256,7 +256,7 @@ app.get('/api/rekap/download', async (req, res) => {
       months,
       members: members.map(m => m.name),
       payments: data.payments,
-      title: 'Rekap Kas Wajib',
+      title: 'Rekap Kas Wajib Anggota Satpam bjb Sumber',
     });
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'attachment; filename="rekap-kas.pdf"');
@@ -333,7 +333,7 @@ app.get('/api/pengeluaran/pdf', async (req, res) => {
     const pdfBuffer = await buildExpensePdf({
       expenses: data.expenses,
       totalMasuk,
-      title: 'Rekap Pengeluaran Kas',
+      title: 'Rekap Pengeluaran Kas Anggota Satpam bjb Sumber',
     });
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'attachment; filename="pengeluaran-kas.pdf"');
