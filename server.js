@@ -174,7 +174,10 @@ app.post('/webhook/fonnte', async (req, res) => {
   }
 
   const data = loadData();
-  data.payments[payKey(result.member, result.month)] = result.amount;
+  const key = payKey(result.member, result.month);
+  const sudahTercatatSama = data.payments[key] === result.amount;
+
+  data.payments[key] = result.amount;
   data.log.unshift({
     member: result.member,
     month: result.month,
@@ -184,6 +187,15 @@ app.post('/webhook/fonnte', async (req, res) => {
   });
   data.log = data.log.slice(0, 200); // simpan 200 log terakhir saja
   saveData(data);
+
+  if (sudahTercatatSama) {
+    // Pembayaran ini persis sama dengan yang sudah tercatat sebelumnya —
+    // kemungkinan gateway mengirim ulang webhook yang sama (retry, status
+    // callback, dll). Jangan balas lagi supaya anggota tidak dibanjiri
+    // pesan konfirmasi berulang.
+    console.log('Pembayaran sudah pernah tercatat identik, balasan dilewati:', key);
+    return res.json({ recorded: true, duplicate: true, ...result });
+  }
 
   const rupiah = 'Rp' + result.amount.toLocaleString('id-ID');
   await sendWhatsAppReply(
