@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Buku Kas Wajib Satpam bjb Sumber &mdash; Live</title>
+<title>Buku Kas Wajib &mdash; Live</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,500;0,700;1,500&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap');
   :root{
@@ -94,7 +94,7 @@
         </div>
       </div>
       <div>
-        <h1>Buku Kas Wajib Satpam bjb Sumber</h1>
+        <h1>Buku Kas Wajib</h1>
         <p><span class="live-dot"></span>Terhubung ke WhatsApp &mdash; data diperbarui otomatis</p>
       </div>
     </div>
@@ -154,19 +154,52 @@
     </p>
     <div class="tagih-row">
       <input type="date" id="expTanggal">
+      <select id="expBulan"></select>
       <input type="text" id="expKeterangan" placeholder="Keterangan, mis. Beli spanduk 17 Agustus" style="flex:2;">
       <input type="number" id="expNominal" placeholder="Nominal">
       <input type="password" id="expToken" placeholder="Token admin">
       <button id="expTambahBtn">+ Tambah</button>
     </div>
+    <div class="tagih-row" style="margin-top:8px;">
+      <label style="font-size:0.82rem;color:var(--ink-soft);align-self:center;">Filter bulan:</label>
+      <select id="expFilterBulan"><option value="">Semua bulan</option></select>
+    </div>
     <div class="table-scroll">
       <table>
-        <thead><tr><th style="width:38px;">No</th><th>Tanggal</th><th style="text-align:left;">Keterangan</th><th>Nominal</th><th></th></tr></thead>
+        <thead><tr><th style="width:38px;">No</th><th>Tanggal</th><th>Bulan</th><th style="text-align:left;">Keterangan</th><th>Nominal</th><th></th></tr></thead>
         <tbody id="expTbody"></tbody>
       </table>
     </div>
     <div style="margin-top:12px;">
       <button id="unduhPengeluaranBtn" class="secondary-btn">Unduh PDF daftar pengeluaran</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Pemasukan kas (lain-lain)</h2>
+    <p style="margin:0 0 12px;color:var(--ink-soft);font-size:0.85rem;">
+      Untuk pemasukan di luar iuran wajib bulanan lewat WhatsApp — donasi, dana tambahan, dsb. Terbuka untuk dilihat semua anggota, menambah data perlu token admin.
+    </p>
+    <div class="tagih-row">
+      <input type="date" id="incTanggal">
+      <select id="incBulan"></select>
+      <input type="text" id="incKeterangan" placeholder="Keterangan, mis. Donasi HUT RI" style="flex:2;">
+      <input type="number" id="incNominal" placeholder="Nominal">
+      <input type="password" id="incToken" placeholder="Token admin">
+      <button id="incTambahBtn">+ Tambah</button>
+    </div>
+    <div class="tagih-row" style="margin-top:8px;">
+      <label style="font-size:0.82rem;color:var(--ink-soft);align-self:center;">Filter bulan:</label>
+      <select id="incFilterBulan"><option value="">Semua bulan</option></select>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th style="width:38px;">No</th><th>Tanggal</th><th>Bulan</th><th style="text-align:left;">Keterangan</th><th>Nominal</th><th></th></tr></thead>
+        <tbody id="incTbody"></tbody>
+      </table>
+    </div>
+    <div style="margin-top:12px;">
+      <button id="unduhPemasukanBtn" class="secondary-btn">Unduh PDF daftar pemasukan</button>
     </div>
   </div>
 
@@ -184,7 +217,7 @@
 
   <div class="panel" style="padding:0;overflow:hidden;">
     <div style="padding:18px 20px 0;">
-      <h2>Kas Wajib Masuk satpam bjb Sumber</h2>
+      <h2>Kas Wajib Masuk</h2>
     </div>
     <div class="table-scroll">
       <table>
@@ -221,10 +254,49 @@ async function fetchData(){
     current = await res.json();
     document.getElementById('statusTag').textContent = 'diperbarui ' + new Date().toLocaleTimeString('id-ID');
     render();
+    populateMonthSelects(current.months);
   }catch(e){
     document.getElementById('statusTag').textContent = 'gagal memuat data';
   }
   fetchExpenses();
+  fetchIncome();
+}
+
+let lastExpenses = [];
+let lastIncome = [];
+
+function populateMonthSelects(months) {
+  [ 'expBulan', 'incBulan' ].forEach(id => {
+    const el = document.getElementById(id);
+    const prev = el.value;
+    el.innerHTML = months.map(m => `<option value="${m}">${m}</option>`).join('');
+    if (months.includes(prev)) el.value = prev;
+  });
+  [ 'expFilterBulan', 'incFilterBulan' ].forEach(id => {
+    const el = document.getElementById(id);
+    const prev = el.value;
+    el.innerHTML = '<option value="">Semua bulan</option>' + months.map(m => `<option value="${m}">${m}</option>`).join('');
+    if (months.includes(prev)) el.value = prev;
+  });
+}
+
+function renderLedgerTable(tbodyId, entries, filterValue, onDelete) {
+  const filtered = filterValue ? entries.filter(e => e.bulan === filterValue) : entries;
+  const tbody = document.getElementById(tbodyId);
+  tbody.innerHTML = filtered.length ? filtered.map((e, i) => `
+      <tr>
+        <td class="no">${i + 1}</td>
+        <td>${e.tanggal}</td>
+        <td>${e.bulan || '-'}</td>
+        <td>${e.keterangan}</td>
+        <td class="jumlah">${fmt(e.nominal)}</td>
+        <td class="aksi"><button data-id="${e.id}">hapus</button></td>
+      </tr>
+    `).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--ink-soft);">Belum ada data untuk filter ini.</td></tr>';
+
+  tbody.querySelectorAll('button[data-id]').forEach(btn => {
+    btn.addEventListener('click', () => onDelete(btn.dataset.id));
+  });
 }
 
 async function fetchExpenses(){
@@ -237,26 +309,42 @@ async function fetchExpenses(){
     saldoEl.textContent = fmt(data.saldo);
     saldoEl.className = 'saldo-val ' + (data.saldo < 0 ? 'out' : 'in');
 
-    const tbody = document.getElementById('expTbody');
-    tbody.innerHTML = data.expenses.length ? data.expenses.map((e,i)=>`
-      <tr>
-        <td class="no">${i+1}</td>
-        <td>${e.tanggal}</td>
-        <td>${e.keterangan}</td>
-        <td class="jumlah">${fmt(e.nominal)}</td>
-        <td class="aksi"><button data-id="${e.id}">hapus</button></td>
-      </tr>
-    `).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--ink-soft);">Belum ada pengeluaran tercatat.</td></tr>';
-
-    tbody.querySelectorAll('button[data-id]').forEach(btn=>{
-      btn.addEventListener('click', async ()=>{
-        const token = document.getElementById('expToken').value;
-        await fetch('/api/pengeluaran/' + btn.dataset.id, { method:'DELETE', headers:{'x-admin-token': token} });
-        fetchExpenses();
-      });
+    lastExpenses = data.expenses;
+    renderLedgerTable('expTbody', lastExpenses, document.getElementById('expFilterBulan').value, async (id) => {
+      const token = document.getElementById('expToken').value;
+      await fetch('/api/pengeluaran/' + id, { method:'DELETE', headers:{'x-admin-token': token} });
+      fetchExpenses();
     });
   }catch(e){ /* biarkan diam, tidak kritis untuk tampilan utama */ }
 }
+
+async function fetchIncome(){
+  try{
+    const res = await fetch('/api/pemasukan');
+    const data = await res.json();
+    lastIncome = data.income;
+    renderLedgerTable('incTbody', lastIncome, document.getElementById('incFilterBulan').value, async (id) => {
+      const token = document.getElementById('incToken').value;
+      await fetch('/api/pemasukan/' + id, { method:'DELETE', headers:{'x-admin-token': token} });
+      fetchIncome();
+    });
+  }catch(e){ /* biarkan diam */ }
+}
+
+document.getElementById('expFilterBulan').addEventListener('change', () => {
+  renderLedgerTable('expTbody', lastExpenses, document.getElementById('expFilterBulan').value, async (id) => {
+    const token = document.getElementById('expToken').value;
+    await fetch('/api/pengeluaran/' + id, { method:'DELETE', headers:{'x-admin-token': token} });
+    fetchExpenses();
+  });
+});
+document.getElementById('incFilterBulan').addEventListener('change', () => {
+  renderLedgerTable('incTbody', lastIncome, document.getElementById('incFilterBulan').value, async (id) => {
+    const token = document.getElementById('incToken').value;
+    await fetch('/api/pemasukan/' + id, { method:'DELETE', headers:{'x-admin-token': token} });
+    fetchIncome();
+  });
+});
 
 function render(){
   const { months, members, payments, log } = current;
@@ -421,6 +509,7 @@ document.getElementById('kirimRekapBtn').addEventListener('click', async ()=>{
 
 document.getElementById('expTambahBtn').addEventListener('click', async ()=>{
   const tanggal = document.getElementById('expTanggal').value;
+  const bulan = document.getElementById('expBulan').value;
   const keterangan = document.getElementById('expKeterangan').value.trim();
   const nominal = document.getElementById('expNominal').value;
   const token = document.getElementById('expToken').value;
@@ -429,7 +518,7 @@ document.getElementById('expTambahBtn').addEventListener('click', async ()=>{
   const res = await fetch('/api/pengeluaran', {
     method:'POST',
     headers:{'Content-Type':'application/json', 'x-admin-token': token},
-    body: JSON.stringify({ tanggal, keterangan, nominal })
+    body: JSON.stringify({ tanggal, bulan, keterangan, nominal })
   });
   const data = await res.json();
   if (data.error) { alert(data.error); return; }
@@ -440,6 +529,31 @@ document.getElementById('expTambahBtn').addEventListener('click', async ()=>{
 
 document.getElementById('unduhPengeluaranBtn').addEventListener('click', ()=>{
   window.open('/api/pengeluaran/pdf', '_blank');
+});
+
+document.getElementById('incTambahBtn').addEventListener('click', async ()=>{
+  const tanggal = document.getElementById('incTanggal').value;
+  const bulan = document.getElementById('incBulan').value;
+  const keterangan = document.getElementById('incKeterangan').value.trim();
+  const nominal = document.getElementById('incNominal').value;
+  const token = document.getElementById('incToken').value;
+  if (!tanggal || !keterangan || !nominal) { alert('Tanggal, keterangan, dan nominal wajib diisi.'); return; }
+
+  const res = await fetch('/api/pemasukan', {
+    method:'POST',
+    headers:{'Content-Type':'application/json', 'x-admin-token': token},
+    body: JSON.stringify({ tanggal, bulan, keterangan, nominal })
+  });
+  const data = await res.json();
+  if (data.error) { alert(data.error); return; }
+  document.getElementById('incKeterangan').value = '';
+  document.getElementById('incNominal').value = '';
+  fetchIncome();
+  fetchExpenses(); // saldo ikut berubah karena pemasukan lain-lain bertambah
+});
+
+document.getElementById('unduhPemasukanBtn').addEventListener('click', ()=>{
+  window.open('/api/pemasukan/pdf', '_blank');
 });
 
 document.getElementById('buktiMuatBtn').addEventListener('click', async ()=>{
