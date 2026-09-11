@@ -58,7 +58,11 @@ function loadData() {
   if (!fs.existsSync(DATA_PATH)) {
     fs.writeFileSync(
       DATA_PATH,
-      JSON.stringify({ payments: {}, log: [], lastReminder: {}, recapSent: {}, recapLog: [], expenses: [], bukti: {} }, null, 2)
+      JSON.stringify(
+        { payments: {}, log: [], lastReminder: {}, recapSent: {}, recapLog: [], expenses: [], bukti: {}, processedInbound: {} },
+        null,
+        2
+      )
     );
   }
   const data = JSON.parse(fs.readFileSync(DATA_PATH, 'utf-8'));
@@ -68,6 +72,7 @@ function loadData() {
   if (!data.recapLog) data.recapLog = [];
   if (!data.expenses) data.expenses = [];
   if (!data.bukti) data.bukti = {};
+  if (!data.processedInbound) data.processedInbound = {};
   return data;
 }
 
@@ -204,6 +209,43 @@ async function maybeSendRecap(month, req) {
   return generateAndSendRecap({ month, months, members, data, req });
 }
 
+// Fonnte (atau gateway lain) kadang memanggil webhook lebih dari sekali
+// untuk satu pesan yang sama — misalnya karena status pengiriman (terkirim/
+// sampai/dibaca) ikut memicu webhook, atau ada retry di sisi mereka. Fungsi
+// ini mencari ID unik pesan kalau tersedia (nama field bisa beda-beda,
+// makanya dicoba beberapa kemungkinan) supaya kita bisa mengenali "ini
+// pesan yang sama, sudah pernah diproses" dan tidak balas berkali-kali.
+function getMessageId(body) {
+  return body.id || body.message_id || body.messageId || body.msgId || body.msg_id || null;
+}
+
+function isDuplicateInbound(data, body, senderPhone, text) {
+  const id = getMessageId(body);
+  const now = Date.now();
+
+  // Buang catatan yang sudah lama (lebih dari 1 jam) supaya file tidak
+  // membengkak terus-menerus.
+  Object.keys(data.processedInbound).forEach(k => {
+    if (now - data.processedInbound[k] > 60 * 60 * 1000) delete data.processedInbound[k];
+  });
+
+  // Kalau gateway menyertakan ID pesan, itu penanda paling akurat.
+  if (id) {
+    const key = 'id:' + id;
+    if (data.processedInbound[key]) return true;
+    data.processedInbound[key] = now;
+    return false;
+  }
+
+  // Tidak ada ID pesan (field-nya tidak dikenali) — jaga-jaga pakai
+  // kombinasi nomor pengirim + isi teks, dianggap "pesan sama" kalau
+  // muncul lagi dalam 15 detik terakhir.
+  const fallbackKey = 'txt:' + senderPhone + '||' + text.trim().toLowerCase();
+  const lastSeen = data.processedInbound[fallbackKey];
+  data.processedInbound[fallbackKey] = now;
+  return !!(lastSeen && now - lastSeen < 15000);
+}
+
 // ---- Endpoint utama: menerima pesan dari Fonnte ----
 // Sesuaikan nama field di sini jika format webhook gateway kamu berbeda.
 // Payload Fonnte umumnya berbentuk: { device, sender, message, name }
@@ -214,6 +256,14 @@ app.post('/webhook/fonnte', async (req, res) => {
 
   console.log('Pesan masuk:', { senderPhone, text });
   console.log('Pesan masuk (lengkap, untuk debug field bukti foto):', JSON.stringify(body));
+
+  const data = loadData();
+  if (isDuplicateInbound(data, body, senderPhone, text)) {
+    saveData(data);
+    console.log('Pesan ini terdeteksi kiriman ulang/duplikat dari gateway, diabaikan.');
+    return res.json({ recorded: false, reason: 'duplikat_pesan_dari_gateway' });
+  }
+  saveData(data);
 
   const { months, members } = loadMembers();
   const result = parseMessage({
@@ -254,29 +304,27 @@ app.post('/webhook/fonnte', async (req, res) => {
     }
   }
 
-  const data = loadData();
+  const data2 = loadData();
   const key = payKey(result.member, result.month);
-  const sudahTercatatSama = data.payments[key] === result.amount;
+  const sudahTercatatSama = data2.payments[key] === result.amount;
 
-  data.payments[key] = result.amount;
+  data2.payments[key] = result.amount;
   if (buktiFilename) {
-    data.bukti[key] = { filename: buktiFilename, at: new Date().toISOString() };
+    data2.bukti[key] = { filename: buktiFilename, at: new Date().toISOString() };
   }
-  data.log.unshift({
+  data2.log.unshift({
     member: result.member,
     month: result.month,
     amount: result.amount,
     text,
     at: new Date().toISOString(),
   });
-  data.log = data.log.slice(0, 200); // simpan 200 log terakhir saja
-  saveData(data);
+  data2.log = data2.log.slice(0, 200); // simpan 200 log terakhir saja
+  saveData(data2);
 
   if (sudahTercatatSama) {
-    // Pembayaran ini persis sama dengan yang sudah tercatat sebelumnya —
-    // kemungkinan gateway mengirim ulang webhook yang sama (retry, status
-    // callback, dll). Jangan balas lagi supaya anggota tidak dibanjiri
-    // pesan konfirmasi berulang.
+    // Pembayaran ini persis sama dengan yang sudah tercatat sebelumnya.
+    // Jangan balas lagi supaya anggota tidak dibanjiri pesan konfirmasi.
     console.log('Pembayaran sudah pernah tercatat identik, balasan dilewati:', key);
     return res.json({ recorded: true, duplicate: true, ...result });
   }
