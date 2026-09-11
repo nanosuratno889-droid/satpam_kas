@@ -483,7 +483,7 @@ app.get('/api/pengeluaran/pdf', async (req, res) => {
     const pdfBuffer = await buildExpensePdf({
       expenses: data.expenses,
       totalMasuk,
-      title: 'Rekap Pengeluaran Kas Satpam bjb Sumber',
+      title: 'Pelaporan Rekap Pengeluaran Kas Satpam bjb Sumber',
     });
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'attachment; filename="laporan-pengeluaran-kas-sbs.pdf"');
