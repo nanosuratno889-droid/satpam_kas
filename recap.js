@@ -41,9 +41,9 @@ function buildRecapPdf({ months, members, payments, title }) {
     const bottomLimit = doc.page.height - doc.page.margins.bottom - rowHeight;
 
     doc.fontSize(14).font('Helvetica-Bold').fillColor(COLORS.header)
-      .text(title || 'Rekap Kas Wajib', marginLeft, marginTop);
+      .text(title || 'Pelaporan Rekap Kas Wajib Satpam bjb Sumber', marginLeft, marginTop);
     doc.fontSize(8).font('Helvetica').fillColor('#5c5a4c')
-      .text('Dicetak otomatis: ' + new Date().toLocaleString('id-ID'), marginLeft, marginTop + 18);
+      .text('Dicetak otomatis dan telah disetejui oleh KOMANDAN Bpk H MEMET: ' + new Date().toLocaleString('id-ID'), marginLeft, marginTop + 18);
 
     let y = marginTop + 36;
 
@@ -139,9 +139,9 @@ function buildExpensePdf({ expenses, totalMasuk, title }) {
     const saldo = (totalMasuk || 0) - totalKeluar;
 
     doc.fontSize(14).font('Helvetica-Bold').fillColor(COLORS.header)
-      .text(title || 'Rekap Pengeluaran Kas', marginLeft, marginTop);
+      .text(title || 'Pelaporan Rekap Pengeluaran Kas Satpam bjb Sumber', marginLeft, marginTop);
     doc.fontSize(8).font('Helvetica').fillColor('#5c5a4c')
-      .text('Dicetak otomatis: ' + new Date().toLocaleString('id-ID'), marginLeft, marginTop + 18);
+      .text('Dicetak otomatis dan telah disetujui oleh KOMANDAN Bpk H MEMET: ' + new Date().toLocaleString('id-ID'), marginLeft, marginTop + 18);
 
     let y = marginTop + 40;
     doc.fontSize(9).font('Helvetica-Bold').fillColor('#26291f');
@@ -235,9 +235,9 @@ function buildIncomePdf({ income, totalIuran, totalKeluar, title }) {
     const saldo = totalMasuk - (totalKeluar || 0);
 
     doc.fontSize(14).font('Helvetica-Bold').fillColor(COLORS.header)
-      .text(title || 'Rekap Pemasukan Kas', marginLeft, marginTop);
+      .text(title || 'Pelaporan Rekap Pemasukan Kas Satpam bjb Sumber', marginLeft, marginTop);
     doc.fontSize(8).font('Helvetica').fillColor('#5c5a4c')
-      .text('Dicetak otomatis: ' + new Date().toLocaleString('id-ID'), marginLeft, marginTop + 18);
+      .text('Dicetak otomatis dan telah disetujui oleh KOMANDAN Bpk H MEMET: ' + new Date().toLocaleString('id-ID'), marginLeft, marginTop + 18);
 
     let y = marginTop + 40;
     doc.fontSize(9).font('Helvetica-Bold').fillColor('#26291f');
